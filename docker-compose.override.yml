@@ -1,0 +1,28 @@
+# Override для разработки (опционально)
+# Этот файл автоматически применяется поверх docker-compose.yml
+
+version: '3.8'
+
+services:
+  backend:
+    # Можно добавить volume для hot reload
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+    # Переопределить команду, если нужно
+    # command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    
+  frontend:
+    # Hot reload уже включен
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    
+  # Для отладки можно открыть порты напрямую (без nginx)
+  # backend:
+  #   ports:
+  #     - "8000:8000"
+  # frontend:
+  #   ports:
+  #     - "3000:3000"
+

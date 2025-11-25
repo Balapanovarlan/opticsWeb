@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite3
+
+# Node.js / React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+
+# React build
+frontend/build/
+frontend/.DS_Store
+frontend/npm-debug.log*
+
+# Docker
+.dockerignore
+
+# SSL certificates
+*.key
+*.crt
+*.pem
+nginx/ssl/
+
+# Alembic
+alembic/versions/*.py
+!alembic/versions/__init__.py
+
+# OS
+.DS_Store
+Thumbs.db
+
