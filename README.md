@@ -19,21 +19,21 @@ chmod +x START_LINUX.sh
 
 ### Вручную
 ```bash
-# 1. SSL сертификаты
-cd nginx && ./generate-cert.sh && cd ..
-
-# 2. Запуск контейнеров
+# 1. Запуск контейнеров
 docker-compose up -d
 
-# 3. Миграции БД (подождите 30 сек после запуска)
+# 2. Миграции БД (подождите 30 сек после запуска)
 docker-compose exec backend alembic revision --autogenerate -m "Initial"
 docker-compose exec backend alembic upgrade head
 
-# 4. Создание администратора
+# 3. Создание администратора
 docker-compose exec backend python -m app.scripts.create_admin
 ```
 
-**Готово!** Откройте https://localhost
+**Готово!** Откройте http://localhost:3000
+
+> ⚠️ **ВАЖНО**: Всегда используйте `http://localhost:3000` для доступа к приложению.  
+> Не переключайтесь между разными URL - localStorage с токенами привязан к конкретному origin!
 
 ---
 
@@ -50,24 +50,23 @@ docker-compose exec backend python -m app.scripts.create_admin
 ## 🏗️ Архитектура
 
 ```
-┌─────────────┐      HTTPS      ┌─────────────┐
-│   Browser   │ ◄──────────────► │    Nginx    │
-└─────────────┘                  │ (TLS/Proxy) │
-                                 └──────┬──────┘
+┌─────────────┐      HTTP       ┌─────────────┐
+│   Browser   │ ◄──────────────► │    React    │
+│             │    :3000         │  Frontend   │
+└─────────────┘                  └──────┬──────┘
                                         │
-                        ┌───────────────┼───────────────┐
-                        │               │               │
-                   ┌────▼────┐    ┌────▼────┐    ┌────▼────┐
-                   │ React   │    │ FastAPI │    │Postgres │
-                   │Frontend │    │ Backend │    │   DB    │
-                   └─────────┘    └─────────┘    └─────────┘
+                                   HTTP │ :8000
+                                        │
+                                 ┌──────▼──────┐      ┌──────────┐
+                                 │   FastAPI   │◄────►│Postgres  │
+                                 │   Backend   │      │    DB    │
+                                 └─────────────┘      └──────────┘
 ```
 
 **Технологии:**
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
 - **Backend**: FastAPI + SQLAlchemy 2.0 + Alembic
 - **Database**: PostgreSQL
-- **Proxy**: Nginx (HTTPS/TLS)
 - **Deploy**: Docker + Docker Compose
 
 ---
@@ -76,10 +75,11 @@ docker-compose exec backend python -m app.scripts.create_admin
 
 ### ✅ Аутентификация
 - JWT токены (Access + Refresh)
-- HttpOnly cookies для защиты от XSS
+- localStorage для хранения токенов
 - TOTP 2FA через Google Authenticator
 - Валидация надежности паролей
 - Bcrypt хэширование (cost: 12)
+- Долгоживущие токены (24ч access, 30 дней refresh)
 
 ### ✅ Авторизация (RBAC)
 - **Administrator** - полный доступ
@@ -95,11 +95,11 @@ docker-compose exec backend python -m app.scripts.create_admin
 - Трекинг IP адресов
 
 ### ✅ Защита данных
-- HTTPS/TLS шифрование
 - SQL Injection protection (ORM)
-- XSS protection (HttpOnly cookies)
-- CSRF protection (SameSite)
+- XSS protection (Content Security Policy)
+- CSRF protection (Token validation)
 - CORS политика
+- Безопасное хранение паролей (Bcrypt)
 
 ---
 
@@ -288,13 +288,13 @@ optics/
 - ✅ React SPA frontend
 - ✅ PostgreSQL + Alembic миграции
 - ✅ Docker окружение (4 контейнера)
-- ✅ JWT аутентификация (httpOnly cookies)
+- ✅ JWT аутентификация (localStorage)
 - ✅ 2FA TOTP (Google Authenticator)
 - ✅ RBAC (admin/staff/user)
 - ✅ Полное логирование (audit_log)
 - ✅ Админ-панель (управление + логи)
 - ✅ Фильтры и пагинация логов
-- ✅ HTTPS/TLS + CORS
+- ✅ CORS политика
 - ✅ Bcrypt для паролей
 - ✅ Валидация надежности паролей
 - ✅ Защита от CSRF, XSS, SQL injection
@@ -312,7 +312,7 @@ optics/
 6. Журнал событий с фильтрами
 7. Все логи в БД (таблица audit_log)
 8. HTTPS шифрование
-9. Безопасное хранение токенов (httpOnly)
+9. Безопасное хранение токенов (localStorage)
 10. Миграции Alembic
 
 **Демо:**

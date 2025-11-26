@@ -1,22 +1,20 @@
 # 🚀 Быстрый старт
 
-## Минимальный запуск (3 команды)
+## Минимальный запуск (2 команды)
 
 ```bash
-# 1. Генерация SSL сертификатов (опционально, можно пропустить)
-# Linux/Mac:
-cd nginx && ./generate-cert.sh && cd ..
-
-# 2. Запуск всех сервисов
+# 1. Запуск всех сервисов
 docker-compose up -d
 
-# 3. Подождите 30 секунд, затем примените миграции и создайте админа
+# 2. Подождите 30 секунд, затем примените миграции и создайте админа
 docker-compose exec backend alembic revision --autogenerate -m "Initial"
 docker-compose exec backend alembic upgrade head
 docker-compose exec backend python -m app.scripts.create_admin
 ```
 
-Готово! Откройте https://localhost или http://localhost
+Готово! Откройте http://localhost:3000
+
+> ⚠️ **ВАЖНО**: Всегда используйте `http://localhost:3000` для доступа к приложению.
 
 ---
 
@@ -104,22 +102,10 @@ docker-compose down -v
 
 ## 📁 Основные URL
 
-- **Frontend**: https://localhost
+- **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8000
 - **API Docs (Swagger)**: http://localhost:8000/docs
 - **Database**: localhost:5432
-
----
-
-## ⚠️ SSL Предупреждение
-
-При открытии https://localhost браузер предупредит о небезопасном сертификате. Это нормально для разработки (самоподписанный сертификат).
-
-Нажмите:
-- Chrome: "Advanced" → "Proceed to localhost"
-- Firefox: "Advanced" → "Accept the Risk and Continue"
-
-Или используйте HTTP: http://localhost (без 's')
 
 ---
 
@@ -131,7 +117,7 @@ docker-compose down -v
 ✅ React frontend  
 ✅ PostgreSQL  
 ✅ Docker окружение  
-✅ JWT аутентификация (httpOnly cookies)  
+✅ JWT аутентификация (localStorage)  
 ✅ 2FA TOTP (Google Authenticator)  
 ✅ RBAC (admin/staff/user)  
 ✅ Полное логирование (audit_log)  

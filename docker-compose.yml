@@ -56,26 +56,27 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_API_URL=http://localhost:8000
+      # Прямое подключение к backend
+      - VITE_API_URL=http://localhost:8000
     networks:
       - optics_network
     command: npm start
 
-  nginx:
-    image: nginx:alpine
-    container_name: optics_nginx
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - backend
-      - frontend
-    networks:
-      - optics_network
-    # Если SSL нет, nginx все равно запустится (ssl папка опциональна)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: optics_nginx
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   depends_on:
+  #     - backend
+  #     - frontend
+  #   networks:
+  #     - optics_network
+  #   # Nginx отключен - используем прямой доступ к frontend и backend
 
 volumes:
   postgres_data:

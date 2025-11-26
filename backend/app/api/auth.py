@@ -167,8 +167,8 @@ async def login(
                 detail="Неверный 2FA код"
             )
     
-    # Создание токенов
-    token_data = {"sub": user.id, "username": user.username, "role": user.role.value}
+    # Создание токенов (sub должен быть строкой!)
+    token_data = {"sub": str(user.id), "username": user.username, "role": user.role.value}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
     
@@ -251,7 +251,16 @@ async def refresh_token(
             detail="Недействительный refresh токен"
         )
     
-    user_id = payload.get("sub")
+    user_id_str = payload.get("sub")
+    
+    # Конвертируем строку в int
+    try:
+        user_id = int(user_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Недействительный refresh токен"
+        )
     
     # Получаем пользователя
     result = await db.execute(select(User).where(User.id == user_id))
@@ -263,8 +272,8 @@ async def refresh_token(
             detail="Пользователь не найден или заблокирован"
         )
     
-    # Создание нового access токена
-    token_data = {"sub": user.id, "username": user.username, "role": user.role.value}
+    # Создание нового access токена (sub должен быть строкой!)
+    token_data = {"sub": str(user.id), "username": user.username, "role": user.role.value}
     new_access_token = create_access_token(token_data)
     
     return {
