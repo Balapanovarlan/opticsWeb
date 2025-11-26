@@ -17,28 +17,65 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // ВАЖНО: Инициализируем loading как true только если есть токен в localStorage
+  // Иначе будет мгновенный редирект на /login до проверки
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    // Проверяем наличие токена при инициализации
+    const hasToken = !!localStorage.getItem('access_token');
+    console.log('🎬 [AUTH] Initial loading state:', hasToken ? 'true (has token)' : 'false (no token)');
+    return hasToken; // Если токен есть - показываем загрузку, если нет - сразу false
+  });
 
   // Проверка текущего пользователя при загрузке
   useEffect(() => {
-    checkAuth();
+    console.log('🔄 [AUTH] AuthProvider mounted');
+    
+    // Проверяем токен перед вызовом checkAuth
+    const hasToken = !!localStorage.getItem('access_token');
+    
+    if (hasToken) {
+      console.log('✅ [AUTH] Token found, checking auth...');
+      checkAuth();
+    } else {
+      console.log('ℹ️ [AUTH] No token on mount, skipping auth check');
+      setLoading(false);
+    }
   }, []);
 
   const checkAuth = async () => {
     console.log('🔍 [AUTH] Checking authentication...');
-    const token = localStorage.getItem('access_token');
-    console.log('🔑 [AUTH] Token in localStorage:', token ? `exists (${token.length} chars)` : 'not found');
+    console.log('📍 [AUTH] Current URL:', window.location.href);
+    console.log('🌐 [AUTH] Origin:', window.location.origin);
     
+    // Детальная проверка localStorage
+    const token = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    console.log('🔑 [AUTH] Tokens check:', {
+      access: token ? `exists (${token.length} chars)` : '❌ NOT FOUND',
+      refresh: refreshToken ? `exists (${refreshToken.length} chars)` : '❌ NOT FOUND',
+      localStorageLength: localStorage.length,
+      allKeys: Object.keys(localStorage)
+    });
+
+    // Если токена нет — нет смысла дергать backend
+    if (!token) {
+      console.log('ℹ️ [AUTH] No access token, user is not authenticated');
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       const userData = await authAPI.getCurrentUser();
       console.log('✅ [AUTH] User authenticated:', userData.username);
       setUser(userData);
     } catch (error: any) {
-      // Игнорируем 401/403 ошибки при проверке авторизации (пользователь просто не авторизован)
+      // Игнорируем 401/403 ошибки при проверке авторизации
       if (error.response?.status === 401 || error.response?.status === 403) {
         console.log(`ℹ️ [AUTH] User not authenticated (${error.response?.status})`);
-        console.log('🔑 [AUTH] Clearing tokens...');
+        console.log('🔑 [AUTH] Clearing invalid tokens...');
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
       } else {
@@ -52,26 +89,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (username: string, password: string, totp_token?: string) => {
     console.log('🔐 [AUTH] Starting login for:', username);
+    
+    // Проверяем localStorage ДО логина
+    console.log('📦 [AUTH] localStorage BEFORE login:', {
+      access: localStorage.getItem('access_token') ? 'exists' : 'none',
+      refresh: localStorage.getItem('refresh_token') ? 'exists' : 'none'
+    });
+    
     try {
       const response = await authAPI.login({ username, password, totp_token });
       console.log('✅ [AUTH] Login successful, user:', response.user);
       
-      // Проверяем, что токены действительно сохранились
-      const savedToken = localStorage.getItem('access_token');
-      const savedRefreshToken = localStorage.getItem('refresh_token');
+      // Немедленно проверяем localStorage ПОСЛЕ логина
+      setTimeout(() => {
+        const savedToken = localStorage.getItem('access_token');
+        const savedRefreshToken = localStorage.getItem('refresh_token');
+        
+        console.log('📦 [AUTH] localStorage AFTER login:', {
+          access: savedToken ? `${savedToken.substring(0, 20)}... (${savedToken.length} chars)` : 'MISSING',
+          refresh: savedRefreshToken ? `${savedRefreshToken.substring(0, 20)}... (${savedRefreshToken.length} chars)` : 'MISSING'
+        });
+        
+        if (!savedToken || !savedRefreshToken) {
+          console.error('❌ [AUTH] CRITICAL: Tokens NOT in localStorage after login!');
+          console.error('   - Response had tokens:', {
+            access: !!response.access_token,
+            refresh: !!response.refresh_token
+          });
+        }
+      }, 100);
       
-      if (savedToken && savedRefreshToken) {
-        console.log('💾 [AUTH] Tokens saved to localStorage');
-        console.log(`   - access_token: ${savedToken.length} chars`);
-        console.log(`   - refresh_token: ${savedRefreshToken.length} chars`);
-      } else {
-        console.error('❌ [AUTH] Tokens NOT saved to localStorage!');
-        console.error('   - access_token:', savedToken ? 'exists' : 'MISSING');
-        console.error('   - refresh_token:', savedRefreshToken ? 'exists' : 'MISSING');
-        console.error('   - Response data:', response);
-      }
-      
-      // Устанавливаем пользователя из ответа (не делаем запрос /auth/me)
+      // Устанавливаем пользователя из ответа
       setUser(response.user);
     } catch (error: any) {
       console.error('❌ [AUTH] Login failed:', error);

@@ -3,6 +3,7 @@
  */
 import axios from 'axios';
 
+// Прямое подключение к backend без nginx
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Функции для работы с токенами в localStorage

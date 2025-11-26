@@ -21,7 +21,16 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) => {
   const { user, loading } = useAuth();
 
+  console.log('🛡️ [PROTECTED] Route check:', {
+    loading,
+    hasUser: !!user,
+    userRole: user?.role,
+    requireAdmin,
+    path: window.location.pathname
+  });
+
   if (loading) {
+    console.log('⏳ [PROTECTED] Still loading, showing spinner...');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
@@ -30,13 +39,16 @@ const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.Re
   }
 
   if (!user) {
+    console.log('🚫 [PROTECTED] No user, redirecting to /login');
     return <Navigate to="/login" replace />;
   }
 
   if (requireAdmin && user.role !== 'admin' && user.role !== 'staff') {
+    console.log('🚫 [PROTECTED] User not admin/staff, redirecting to /');
     return <Navigate to="/" replace />;
   }
 
+  console.log('✅ [PROTECTED] Access granted');
   return <>{children}</>;
 };
 
