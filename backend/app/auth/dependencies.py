@@ -81,6 +81,14 @@ async def get_current_user(
             detail="Пользователь не найден"
         )
     
+    # Проверяем session_token (защита от использования на других устройствах)
+    token_session = payload.get("session")
+    if token_session and user.session_token and token_session != user.session_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Сессия недействительна. Войдите заново."
+        )
+    
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

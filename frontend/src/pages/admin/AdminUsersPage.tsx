@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminAPI, User } from '@/services/api';
+import { PlusIcon } from 'lucide-react';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -91,8 +92,8 @@ export default function AdminUsersPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Управление пользователями</h1>
-        <button onClick={() => setShowCreateModal(true)} className="btn btn-primary">
-          ➕ Создать пользователя
+        <button onClick={() => setShowCreateModal(true)} className="btn btn-primary flex items-center gap-2">
+          <PlusIcon/> Создать пользователя
         </button>
       </div>
 

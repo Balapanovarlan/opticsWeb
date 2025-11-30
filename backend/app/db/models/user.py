@@ -32,9 +32,17 @@ class User(Base):
     is_2fa_enabled = Column(Boolean, default=False, nullable=False)
     secret_2fa = Column(String(32), nullable=True)  # TOTP секретный ключ
     
+    # Сессия (для инвалидации токенов на других устройствах)
+    session_token = Column(String(64), nullable=True)  # Уникальный токен сессии
+    
     # Статус аккаунта
     is_active = Column(Boolean, default=True, nullable=False)
     is_blocked = Column(Boolean, default=False, nullable=False)
+    
+    # Подтверждение email
+    email_verified = Column(Boolean, default=False, nullable=False)
+    email_verification_code = Column(String(6), nullable=True)
+    email_verification_expires = Column(DateTime(timezone=True), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

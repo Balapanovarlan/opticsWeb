@@ -6,7 +6,7 @@ from sqlalchemy import insert
 from app.db.models.audit_log import AuditLog, OperationType, StatusType
 from app.db.models.user import User
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 async def log_audit_event(
@@ -36,7 +36,7 @@ async def log_audit_event(
     """
     try:
         log_entry = {
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "user_id": user.id if user else None,
             "username": user.username if user else username,
             "role": user.role.value if user else None,

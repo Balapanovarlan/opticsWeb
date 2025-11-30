@@ -248,6 +248,20 @@ export const authAPI = {
     return response.data;
   },
 
+  verifyEmail: async (username: string, code: string) => {
+    const response = await api.post('/auth/verify-email', null, {
+      params: { username, code }
+    });
+    return response.data;
+  },
+
+  resendVerification: async (username: string) => {
+    const response = await api.post('/auth/resend-verification', null, {
+      params: { username }
+    });
+    return response.data;
+  },
+
   refresh: async () => {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {

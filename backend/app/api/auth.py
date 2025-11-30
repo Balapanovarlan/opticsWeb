@@ -1,10 +1,10 @@
 """
 API endpoints для аутентификации
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import datetime
+from datetime import datetime, timezone
 from app.db.database import get_db
 from app.db.models.user import User
 from app.db.models.audit_log import OperationType, StatusType
@@ -14,12 +14,14 @@ from app.core.security import (
     validate_password_strength,
     create_access_token,
     create_refresh_token,
-    verify_token
+    verify_token,
+    generate_session_token
 )
 from app.auth.totp import verify_totp
 from app.auth.dependencies import get_current_user
 from app.api.schemas import UserRegister, UserLogin, UserResponse, Message, TokenRefresh
 from app.middleware.logging import log_audit_event, get_client_ip
+from app.core.email import generate_verification_code, get_verification_expiry, send_verification_email
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -61,14 +63,26 @@ async def register(
         )
     
     # Создание пользователя
+    verification_code = generate_verification_code()
+    
     new_user = User(
         username=user_data.username,
         email=user_data.email,
-        password_hash=hash_password(user_data.password)
+        password_hash=hash_password(user_data.password),
+        email_verification_code=verification_code,
+        email_verification_expires=get_verification_expiry(),
+        email_verified=False  # Требует подтверждения
     )
     
     db.add(new_user)
     await db.flush()  # Получаем ID
+    
+    # Отправка email с кодом
+    email_sent = await send_verification_email(
+        email=new_user.email,
+        code=verification_code,
+        username=new_user.username
+    )
     
     # Логирование успешной регистрации
     await log_audit_event(
@@ -79,13 +93,99 @@ async def register(
         ip_address=get_client_ip(request),
         target_table="users",
         target_id=new_user.id,
-        details=f"Зарегистрирован новый пользователь: {new_user.username}"
+        details=f"Зарегистрирован новый пользователь: {new_user.username}. Email: {'отправлен' if email_sent else 'не отправлен'}"
     )
     
     await db.commit()
     await db.refresh(new_user)
     
     return new_user
+
+
+@router.post("/verify-email", response_model=Message)
+async def verify_email(
+    username: str = Query(..., description="Имя пользователя"),
+    code: str = Query(..., description="Код подтверждения"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Подтверждение email с помощью кода
+    """
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь не найден"
+        )
+    
+    if user.email_verified:
+        return Message(message="Email уже подтвержден")
+    
+    if not user.email_verification_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Код подтверждения не найден. Запросите новый код."
+        )
+    
+    # Проверка истечения кода
+    if user.email_verification_expires and datetime.now(timezone.utc) > user.email_verification_expires:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Код подтверждения истек. Запросите новый код."
+        )
+    
+    # Проверка кода
+    if user.email_verification_code != code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Неверный код подтверждения"
+        )
+    
+    # Подтверждение email
+    user.email_verified = True
+    user.email_verification_code = None
+    user.email_verification_expires = None
+    await db.commit()
+    
+    return Message(message="Email успешно подтвержден! Теперь вы можете войти в систему.")
+
+
+@router.post("/resend-verification", response_model=Message)
+async def resend_verification(
+    username: str = Query(..., description="Имя пользователя"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Повторная отправка кода подтверждения
+    """
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь не найден"
+        )
+    
+    if user.email_verified:
+        return Message(message="Email уже подтвержден")
+    
+    # Генерация нового кода
+    verification_code = generate_verification_code()
+    user.email_verification_code = verification_code
+    user.email_verification_expires = get_verification_expiry()
+    await db.commit()
+    
+    # Отправка email
+    await send_verification_email(
+        email=user.email,
+        code=verification_code,
+        username=user.username
+    )
+    
+    return Message(message="Новый код подтверждения отправлен на ваш email")
 
 
 @router.post("/login")
@@ -117,6 +217,20 @@ async def login(
         )
     
     # Проверка статуса аккаунта
+    if not user.email_verified:
+        await log_audit_event(
+            db=db,
+            operation=OperationType.LOGIN_FAILED,
+            status=StatusType.FAILED,
+            user=user,
+            ip_address=get_client_ip(request),
+            details="Email не подтвержден"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email не подтвержден. Проверьте вашу почту и введите код подтверждения."
+        )
+    
     if not user.is_active:
         await log_audit_event(
             db=db,
@@ -167,13 +281,22 @@ async def login(
                 detail="Неверный 2FA код"
             )
     
+    # Генерация нового session_token (инвалидирует старые токены)
+    session_token = generate_session_token()
+    user.session_token = session_token
+    
     # Создание токенов (sub должен быть строкой!)
-    token_data = {"sub": str(user.id), "username": user.username, "role": user.role.value}
+    token_data = {
+        "sub": str(user.id), 
+        "username": user.username, 
+        "role": user.role.value,
+        "session": session_token  # Добавляем session_token
+    }
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
     
     # Обновление времени последнего входа
-    user.last_login = datetime.utcnow()
+    user.last_login = datetime.now(timezone.utc)
     await db.commit()
     
     # Логирование успешного входа

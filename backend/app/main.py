@@ -4,6 +4,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 from contextlib import asynccontextmanager
 import logging
 from logging.handlers import RotatingFileHandler
@@ -11,7 +12,7 @@ import os
 
 from app.core.config import settings
 from app.db.database import engine
-from app.api import auth, twofa, admin, logs, products
+from app.api import auth, twofa, admin, logs, products, google_oauth
 
 
 # Настройка логирования в файл
@@ -62,6 +63,12 @@ app = FastAPI(
 )
 
 
+# Session middleware (необходим для Google OAuth)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY
+)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -105,6 +112,7 @@ app.include_router(twofa.router)
 app.include_router(admin.router)
 app.include_router(logs.router)
 app.include_router(products.router)
+app.include_router(google_oauth.router)
 
 
 # Health check

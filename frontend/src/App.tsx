@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import ProductsPage from './pages/ProductsPage';
+import GoogleAuthSuccessPage from './pages/GoogleAuthSuccessPage';
 
 // Admin Pages
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -63,6 +64,7 @@ function AppRoutes() {
         <Route path="products" element={<ProductsPage />} />
         <Route path="login" element={user ? <Navigate to="/profile" /> : <LoginPage />} />
         <Route path="register" element={user ? <Navigate to="/profile" /> : <RegisterPage />} />
+        <Route path="auth/google/success" element={<GoogleAuthSuccessPage />} />
       </Route>
 
       {/* Protected User Routes */}

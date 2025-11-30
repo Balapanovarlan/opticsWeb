@@ -14,6 +14,8 @@ export default function AdminLogsPage() {
     operation: '',
     status: '',
     role: '',
+    from_date: '',
+    to_date: '',
     sort_by: 'timestamp',
     sort_order: 'desc',
   });
@@ -50,6 +52,8 @@ export default function AdminLogsPage() {
       operation: '',
       status: '',
       role: '',
+      from_date: '',
+      to_date: '',
       sort_by: 'timestamp',
       sort_order: 'desc',
     });
@@ -84,6 +88,26 @@ export default function AdminLogsPage() {
       <div className="card mb-6">
         <h3 className="text-lg font-bold mb-4">Фильтры</h3>
         <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Дата от</label>
+            <input
+              type="date"
+              value={filters.from_date}
+              onChange={(e) => setFilters({ ...filters, from_date: e.target.value })}
+              className="input"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Дата до</label>
+            <input
+              type="date"
+              value={filters.to_date}
+              onChange={(e) => setFilters({ ...filters, to_date: e.target.value })}
+              className="input"
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Пользователь</label>
             <input

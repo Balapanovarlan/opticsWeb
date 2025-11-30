@@ -72,7 +72,7 @@ export default function MainLayout() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-6">
         <div className="container mx-auto px-4 text-center">
-          <p>&copy; 2024 Оптика. Система защиты информации.</p>
+          <p>&copy; 2025 Оптика. Система защиты информации.</p>
         </div>
       </footer>
     </div>

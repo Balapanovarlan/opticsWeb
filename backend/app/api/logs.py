@@ -21,8 +21,8 @@ async def get_logs(
     request: Request,
     page: int = Query(1, ge=1, description="Номер страницы"),
     limit: int = Query(50, ge=1, le=200, description="Количество записей на странице"),
-    from_date: Optional[datetime] = Query(None, description="Дата начала фильтра"),
-    to_date: Optional[datetime] = Query(None, description="Дата окончания фильтра"),
+    from_date: Optional[str] = Query(None, description="Дата начала фильтра (YYYY-MM-DD)"),
+    to_date: Optional[str] = Query(None, description="Дата окончания фильтра (YYYY-MM-DD)"),
     role: Optional[str] = Query(None, description="Фильтр по роли"),
     operation: Optional[OperationType] = Query(None, description="Фильтр по типу операции"),
     status: Optional[StatusType] = Query(None, description="Фильтр по статусу"),
@@ -41,11 +41,22 @@ async def get_logs(
     query = select(AuditLog)
     filters = []
     
+    # Парсинг дат из строк
     if from_date:
-        filters.append(AuditLog.timestamp >= from_date)
+        try:
+            from_date_dt = datetime.strptime(from_date, "%Y-%m-%d")
+            filters.append(AuditLog.timestamp >= from_date_dt)
+        except ValueError:
+            pass  # Игнорируем неверный формат
     
     if to_date:
-        filters.append(AuditLog.timestamp <= to_date)
+        try:
+            # Добавляем 23:59:59 чтобы включить весь день
+            to_date_dt = datetime.strptime(to_date, "%Y-%m-%d")
+            to_date_dt = to_date_dt.replace(hour=23, minute=59, second=59)
+            filters.append(AuditLog.timestamp <= to_date_dt)
+        except ValueError:
+            pass  # Игнорируем неверный формат
     
     if role:
         filters.append(AuditLog.role == role)

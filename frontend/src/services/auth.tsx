@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (username: string, password: string, totp_token?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  setTokens?: (accessToken: string, refreshToken: string) => void;
   isAdmin: boolean;
   isStaff: boolean;
 }
@@ -139,12 +140,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(userData);
   };
 
+  const setTokens = (accessToken: string, refreshToken: string) => {
+    console.log('🔑 [AUTH] Setting tokens manually (OAuth)');
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('refresh_token', refreshToken);
+    // После установки токенов проверяем аутентификацию
+    checkAuth();
+  };
+
   const isAdmin = user?.role === 'admin';
   const isStaff = user?.role === 'admin' || user?.role === 'staff';
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, logout, refreshUser, isAdmin, isStaff }}
+      value={{ user, loading, login, logout, refreshUser, setTokens, isAdmin, isStaff }}
     >
       {children}
     </AuthContext.Provider>

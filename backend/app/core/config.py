@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     LOGIN_ATTEMPTS_LIMIT: int = 5
     LOGIN_ATTEMPTS_WINDOW: int = 300  # 5 minutes
     
+    # Google OAuth (optional)
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    
+    # Frontend URL
+    FRONTEND_URL: str = "http://localhost:3000"
+    
     class Config:
         env_file = ".env"
         case_sensitive = True
